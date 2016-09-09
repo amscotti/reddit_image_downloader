@@ -32,11 +32,11 @@ func (i *Item) GetFilenameExt() string {
 	return filepath.Ext(i.GetFilename())
 }
 
-func (i *Item) GetDownloadFile() DownloadFile {
-	return DownloadFile{Filename: i.GetFilename(), URL: html.UnescapeString(i.URL)}
+func (i *Item) GetDownloadFile(folder string) DownloadFile {
+	return DownloadFile{Filename: i.GetFilename(), Folder: folder, URL: html.UnescapeString(i.URL)}
 }
 
-func (r *Reddit) GetReddits(subreddit string) []DownloadFile {
+func (r *Reddit) GetReddits(subreddit string, out chan DownloadFile) {
 	fileExtToDownload := map[string]bool{".jpg": true, ".png": true, ".gif": true}
 	getURL := fmt.Sprintf("http://www.reddit.com/r/%s.json", subreddit)
 	client := &http.Client{}
@@ -64,12 +64,9 @@ func (r *Reddit) GetReddits(subreddit string) []DownloadFile {
 		rPosts[i] = child.Data
 	}
 
-	var fileToDownload []DownloadFile
 	for _, item := range rPosts {
 		if fileExtToDownload[item.GetFilenameExt()] {
-			fileToDownload = append(fileToDownload, item.GetDownloadFile())
+			out <- item.GetDownloadFile(subreddit)
 		}
 	}
-
-	return fileToDownload
 }

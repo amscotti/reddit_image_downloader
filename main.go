@@ -5,9 +5,33 @@ import (
 	"log"
 	"os"
 	"path"
+	"sync"
 
 	"github.com/amscotti/reddit_image_downloader/structs"
 )
+
+func genRedditChannel(reddits []string) <-chan string {
+	out := make(chan string)
+	go func() {
+		for _, r := range reddits {
+			out <- r
+		}
+		close(out)
+	}()
+	return out
+}
+
+func genDownloadFileChannel(in <-chan string) <-chan structs.DownloadFile {
+	out := make(chan structs.DownloadFile)
+	go func() {
+		for r := range in {
+			var reddit structs.Reddit
+			reddit.GetReddits(r, out)
+		}
+		close(out)
+	}()
+	return out
+}
 
 func main() {
 	log.Print("Starting")
@@ -20,18 +44,16 @@ func main() {
 	config.LoadConfig(configFile)
 	log.Printf("Download path %s", config.DownloadPath)
 
-	for _, r := range config.Reddits {
-		log.Printf("Will be downloaded %s", r)
-		outputPath := path.Join(config.DownloadPath, r)
+	var wg sync.WaitGroup
+	for file := range genDownloadFileChannel(genRedditChannel(config.Reddits)) {
+		outputPath := path.Join(config.DownloadPath, file.Folder)
 		os.Mkdir(outputPath, 0777)
-
-		var reddit structs.Reddit
-
-		fileToDownload := reddit.GetReddits(r)
-
-		for _, file := range fileToDownload {
-			file.DownloadFile(outputPath)
-		}
-		log.Printf("Done with %s", r)
+		wg.Add(1)
+		f := file
+		go func() {
+			f.DownloadFile(outputPath)
+			wg.Done()
+		}()
 	}
+	wg.Wait()
 }

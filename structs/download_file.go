@@ -11,6 +11,7 @@ import (
 // DownloadFile holds the details for the file to download
 type DownloadFile struct {
 	Filename string
+	Folder   string
 	URL      string
 }
 
@@ -43,7 +44,7 @@ func (f *DownloadFile) DownloadFile(directory string) bool {
 		log.Fatal("Error writing file ", err)
 		return false
 	}
-	log.Printf("Downloaded file %s", f.Filename)
+	log.Printf("Downloaded %s file %s", f.Folder, f.Filename)
 
 	return true
 }
