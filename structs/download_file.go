@@ -16,7 +16,7 @@ type DownloadFile struct {
 }
 
 func (f *DownloadFile) outFile(directory string) string {
-	return path.Join(directory, f.Filename)
+	return path.Join(directory, f.Folder, f.Filename)
 }
 
 // DownloadFile is used to download the file to the local system
@@ -24,6 +24,7 @@ func (f *DownloadFile) DownloadFile(directory string) bool {
 	if _, err := os.Stat(f.outFile(directory)); err == nil {
 		return true
 	}
+	os.Mkdir(path.Join(directory, f.Folder), 0777)
 
 	output, err := os.Create(f.outFile(directory))
 	defer output.Close()

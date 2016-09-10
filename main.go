@@ -2,12 +2,16 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"html"
+	"io/ioutil"
 	"log"
-	"os"
-	"path"
+	"net/http"
+	"path/filepath"
 	"sync"
 
 	"github.com/amscotti/reddit_image_downloader/structs"
+	"github.com/buger/jsonparser"
 )
 
 func genRedditChannel(reddits []string) <-chan string {
@@ -22,11 +26,34 @@ func genRedditChannel(reddits []string) <-chan string {
 }
 
 func genDownloadFileChannel(in <-chan string) <-chan structs.DownloadFile {
+	fileExtToDownload := map[string]bool{".jpg": true, ".png": true, ".gif": true}
 	out := make(chan structs.DownloadFile)
 	go func() {
 		for r := range in {
-			var reddit structs.Reddit
-			reddit.GetReddits(r, out)
+			client := &http.Client{}
+
+			req, err := http.NewRequest("GET", fmt.Sprintf("http://www.reddit.com/r/%s.json", r), nil)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			req.Header.Set("User-Agent", "GoLang Img Downloadeder/0.1")
+
+			resp, err := client.Do(req)
+			defer resp.Body.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			data, _ := ioutil.ReadAll(resp.Body)
+			jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
+				url, _, _, _ := jsonparser.Get(value, "data", "url")
+				formatedURL := html.UnescapeString(string(url))
+				_, filename := filepath.Split(formatedURL)
+				if fileExtToDownload[filepath.Ext(filename)] {
+					out <- structs.DownloadFile{Filename: filename, Folder: r, URL: formatedURL}
+				}
+			}, "data", "children")
 		}
 		close(out)
 	}()
@@ -46,14 +73,13 @@ func main() {
 
 	var wg sync.WaitGroup
 	for file := range genDownloadFileChannel(genRedditChannel(config.Reddits)) {
-		outputPath := path.Join(config.DownloadPath, file.Folder)
-		os.Mkdir(outputPath, 0777)
 		wg.Add(1)
 		f := file
 		go func() {
-			f.DownloadFile(outputPath)
+			f.DownloadFile(config.DownloadPath)
 			wg.Done()
 		}()
 	}
 	wg.Wait()
+	log.Print("Done")
 }
