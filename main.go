@@ -10,6 +10,25 @@ import (
 	"path/filepath"
 	"sync"
 
+	// My personal preference about package layout:
+	// I'd rename 'structs' to something liked 'redditdl' (for lack of a better name)
+	//
+	// The main package (this file) could go under cmd/redditdl/main.go
+	//
+	// cmd/redditdl/main.go would import: "github.com/amscotti/redditdl", and then have
+	// only a main() method which calls the 'redditdl' public API:
+	//
+	// See https://github.com/scottfrazer/maple for an example of this kind of layout
+	//
+	// redditdl's public API could be something like:
+	//
+	// redditdl.DownloadImages(subreddits []string) []string
+	//
+	// where the return value is a slice of paths to the downloaded images
+	// the parallelism could be handled behind this public API, and maybe with
+	// tuning flags:
+	//
+	// redditdl.DownloadImages(subreddits []string, maxConcurrent int) []string
 	"github.com/amscotti/reddit_image_downloader/structs"
 	"github.com/buger/jsonparser"
 )
@@ -25,6 +44,7 @@ func genRedditChannel(reddits []string) <-chan string {
 	return out
 }
 
+// Personally, I'd have the parameter to this be a []string and get rid of genRedditChannel()
 func genDownloadFileChannel(in <-chan string) <-chan structs.DownloadFile {
 	fileExtToDownload := map[string]bool{".jpg": true, ".png": true, ".gif": true}
 	out := make(chan structs.DownloadFile)
@@ -40,10 +60,11 @@ func genDownloadFileChannel(in <-chan string) <-chan structs.DownloadFile {
 			req.Header.Set("User-Agent", "GoLang Img Downloadeder/0.1")
 
 			resp, err := client.Do(req)
-			defer resp.Body.Close()
 			if err != nil {
 				log.Fatal(err)
 			}
+			// Not that it really matters in this case because of the log.Fatal
+			defer resp.Body.Close()
 
 			data, _ := ioutil.ReadAll(resp.Body)
 			jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {
@@ -74,11 +95,10 @@ func main() {
 	var wg sync.WaitGroup
 	for file := range genDownloadFileChannel(genRedditChannel(config.Reddits)) {
 		wg.Add(1)
-		f := file
-		go func() {
+		go func(f structs.DownloadFile) {
 			f.DownloadFile(config.DownloadPath)
 			wg.Done()
-		}()
+		}(file)
 	}
 	wg.Wait()
 	log.Print("Done")
