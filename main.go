@@ -40,10 +40,10 @@ func genDownloadFileChannel(in <-chan string) <-chan structs.DownloadFile {
 			req.Header.Set("User-Agent", "GoLang Img Downloadeder/0.1")
 
 			resp, err := client.Do(req)
-			defer resp.Body.Close()
 			if err != nil {
 				log.Fatal(err)
 			}
+			defer resp.Body.Close()
 
 			data, _ := ioutil.ReadAll(resp.Body)
 			jsonparser.ArrayEach(data, func(value []byte, dataType jsonparser.ValueType, offset int, err error) {

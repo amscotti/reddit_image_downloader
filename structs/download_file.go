@@ -34,11 +34,11 @@ func (f *DownloadFile) DownloadFile(directory string) bool {
 	}
 
 	response, err := http.Get(f.URL)
-	defer response.Body.Close()
 	if err != nil {
 		log.Fatal("Could not download file ", err)
 		return false
 	}
+	defer response.Body.Close()
 
 	_, err = io.Copy(output, response.Body)
 	if err != nil {
