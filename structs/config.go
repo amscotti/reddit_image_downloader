@@ -8,8 +8,9 @@ import (
 
 //Config hold data on what Reddits to pull from
 type Config struct {
-	Reddits      []string
-	DownloadPath string `json:"download_folder"`
+	Subreddits   []string
+	DownloadPath string          `json:"downloadPath"`
+	FileExt      map[string]bool `json:"fileExt"`
 }
 
 // LoadConfig will load in a config from a path

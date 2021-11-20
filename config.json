@@ -1,16 +1,23 @@
 {
-  "reddits": [
+  "subreddits": [
     "EarthPorn",
     "Wallpapers",
     "ServerPorn",
     "unixporn",
     "CoffeePorn",
     "battlestations",
-    "diy",
-    "Space",
-    "Pics",
     "Aww",
-    "Beerwithaview"
+    "Beerwithaview",
+    "OldSchoolCool",
+    "TheWayWeWere",
+    "SkyPorn",
+    "spaceporn",
+    "itookapicture"
   ],
-  "download_folder": "/Users/ascotti/Downloads"
+  "fileExt": {
+    ".jpg": true,
+    ".png": true,
+    ".gif": true
+  },
+  "downloadPath": "/home/ascotti/Downloads"
 }

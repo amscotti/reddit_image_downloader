@@ -14,10 +14,10 @@ import (
 	"github.com/buger/jsonparser"
 )
 
-func genRedditChannel(reddits []string) <-chan string {
+func genRedditChannel(subreddits []string) <-chan string {
 	out := make(chan string)
 	go func() {
-		for _, r := range reddits {
+		for _, r := range subreddits {
 			out <- r
 		}
 		close(out)
@@ -25,13 +25,11 @@ func genRedditChannel(reddits []string) <-chan string {
 	return out
 }
 
-func genDownloadFileChannel(in <-chan string) <-chan structs.DownloadFile {
-	fileExtToDownload := map[string]bool{".jpg": true, ".png": true, ".gif": true}
+func genDownloadFileChannel(in <-chan string, fileExtToDownload map[string]bool) <-chan structs.DownloadFile {
 	out := make(chan structs.DownloadFile)
 	go func() {
+		client := &http.Client{}
 		for r := range in {
-			client := &http.Client{}
-
 			req, err := http.NewRequest("GET", fmt.Sprintf("http://www.reddit.com/r/%s.json", r), nil)
 			if err != nil {
 				log.Fatal(err)
@@ -61,10 +59,13 @@ func genDownloadFileChannel(in <-chan string) <-chan structs.DownloadFile {
 }
 
 func main() {
-	log.Print("Starting")
 	var configFile string
+
 	flag.StringVar(&configFile, "c", "config.json", "Location of configuration file to use")
 	flag.Parse()
+
+	log.Print("Starting")
+
 	log.Printf("Reading Config file at %s", configFile)
 
 	var config structs.Config
@@ -72,7 +73,7 @@ func main() {
 	log.Printf("Download path %s", config.DownloadPath)
 
 	var wg sync.WaitGroup
-	for file := range genDownloadFileChannel(genRedditChannel(config.Reddits)) {
+	for file := range genDownloadFileChannel(genRedditChannel(config.Subreddits), config.FileExt) {
 		wg.Add(1)
 		f := file
 		go func() {
@@ -81,5 +82,6 @@ func main() {
 		}()
 	}
 	wg.Wait()
+
 	log.Print("Done")
 }

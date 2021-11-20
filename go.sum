@@ -1,2 +1,2 @@
-github.com/buger/jsonparser v0.0.0-20160826150728-8ffcad59d114 h1:NBevV1bgYM+Vz8TSnppcJ2Fs8sSweuj94nO+RS4il0Q=
-github.com/buger/jsonparser v0.0.0-20160826150728-8ffcad59d114/go.mod h1:bbYlZJ7hK1yFx9hf58LP0zeX7UjIGs20ufpu3evjr+s=
+github.com/buger/jsonparser v1.1.1 h1:2PnMjfWD7wBILjqQbt530v576A/cAbQvEW9gGIpYMUs=
+github.com/buger/jsonparser v1.1.1/go.mod h1:6RYKKt7H4d4+iWqouImQ9R2FZql3VbhNgx27UK13J/0=
