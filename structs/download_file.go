@@ -27,11 +27,11 @@ func (f *DownloadFile) DownloadFile(directory string) bool {
 	os.Mkdir(path.Join(directory, f.Folder), 0777)
 
 	output, err := os.Create(f.outFile(directory))
-	defer output.Close()
 	if err != nil {
 		log.Fatal("Could not create output file ", err)
 		return false
 	}
+	defer output.Close()
 
 	response, err := http.Get(f.URL)
 	if err != nil {
