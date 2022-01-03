@@ -55,37 +55,43 @@ func downloadFiles(files <-chan structs.DownloadFile, downloadPath string, wg *s
 	}
 }
 
+func downloadImagesFromSubreddits(subreddits []string, downloadPath string, fileExtToDownload map[string]bool) {
+	var wg sync.WaitGroup
+	countOfSubreddits := len(subreddits)
+
+	wg.Add(countOfSubreddits)
+
+	subredditsToRead := make(chan string, countOfSubreddits)
+	files := make(chan structs.DownloadFile, 1000)
+
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go parseSubreddits(subredditsToRead, fileExtToDownload, files, &wg)
+		go downloadFiles(files, downloadPath, &wg)
+	}
+
+	for _, subreddit := range subreddits {
+		subredditsToRead <- subreddit
+	}
+	close(subredditsToRead)
+
+	wg.Wait()
+}
+
 func main() {
 	var configFile string
+	var config structs.Config
 
 	flag.StringVar(&configFile, "c", "config.json", "Location of configuration file to use")
 	flag.Parse()
 
 	log.Print("Starting")
 
-	log.Printf("Reading Config file at %s", configFile)
-
-	var config structs.Config
+	log.Printf("Reading config file at %s", configFile)
 	config.LoadConfig(configFile)
+
 	log.Printf("Download path %s", config.DownloadPath)
 
-	var wg sync.WaitGroup
-
-	subreddits := make(chan string, 100)
-	files := make(chan structs.DownloadFile, 1000)
-
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	for i := 0; i < runtime.NumCPU(); i++ {
-		go parseSubreddits(subreddits, config.FileExt, files, &wg)
-		go downloadFiles(files, config.DownloadPath, &wg)
-	}
-
-	for _, subreddit := range config.Subreddits {
-		wg.Add(1)
-		subreddits <- subreddit
-	}
-
-	wg.Wait()
+	downloadImagesFromSubreddits(config.Subreddits, config.DownloadPath, config.FileExt)
 
 	log.Print("Finish")
 }
