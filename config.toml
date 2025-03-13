@@ -1,0 +1,28 @@
+# Reddit Image Downloader configuration
+
+# List of subreddits to download images from
+subreddits = [
+    "EarthPorn",
+    "Wallpapers",
+    "ServerPorn",
+    "unixporn",
+    "CoffeePorn",
+    "battlestations",
+    "Aww",
+    "Beerwithaview",
+    "OldSchoolCool",
+    "TheWayWeWere",
+    "SkyPorn",
+    "spaceporn",
+    "itookapicture",
+    "pics",
+]
+
+# Path where images will be downloaded
+downloadPath = "download"
+
+# File extensions to download (true = download, false = ignore)
+[fileExt]
+".jpg" = true
+".png" = true
+".gif" = true
