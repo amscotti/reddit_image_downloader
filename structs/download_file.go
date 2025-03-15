@@ -1,6 +1,8 @@
 package structs
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -20,32 +22,55 @@ func (f *DownloadFile) outFile(directory string) string {
 }
 
 // DownloadFile is used to download the file to the local system
-func (f *DownloadFile) DownloadFile(directory string) bool {
+// Uses streaming to avoid loading the entire file into memory
+func (f *DownloadFile) DownloadFile(ctx context.Context, client *http.Client, directory string) error {
+	// Check if file already exists
 	if _, err := os.Stat(f.outFile(directory)); err == nil {
-		return true
+		// File already exists
+		return nil
 	}
-	os.Mkdir(path.Join(directory, f.Folder), 0777)
 
+	// Create directory if it doesn't exist
+	if err := os.MkdirAll(path.Join(directory, f.Folder), 0777); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// Create the output file
 	output, err := os.Create(f.outFile(directory))
 	if err != nil {
-		log.Fatal("Could not create output file ", err)
-		return false
+		return fmt.Errorf("could not create output file: %w", err)
 	}
 	defer output.Close()
 
-	response, err := http.Get(f.URL)
+	// Create request with context for cancelation
+	req, err := http.NewRequestWithContext(ctx, "GET", f.URL, nil)
 	if err != nil {
-		log.Fatal("Could not download file ", err)
-		return false
+		return fmt.Errorf("could not create request: %w", err)
+	}
+
+	// Add useful headers
+	req.Header.Set("User-Agent", "Reddit Image Downloader/1.0")
+
+	// Execute the request
+	response, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("could not download file: %w", err)
 	}
 	defer response.Body.Close()
 
-	_, err = io.Copy(output, response.Body)
-	if err != nil {
-		log.Fatal("Error writing file ", err)
-		return false
+	// Check for successful response
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("received non-200 response: %s", response.Status)
 	}
-	log.Printf("Downloaded %s file %s", f.Folder, f.Filename)
 
-	return true
+	// Stream directly from response body to file (no memory buffering)
+	bytesWritten, err := io.Copy(output, response.Body)
+	if err != nil {
+		return fmt.Errorf("error writing file: %w", err)
+	}
+
+	// Log download success with size information
+	sizeKB := float64(bytesWritten) / 1024.0
+	log.Printf("Downloaded %s file %s (%.2f KB)", f.Folder, f.Filename, sizeKB)
+	return nil
 }
